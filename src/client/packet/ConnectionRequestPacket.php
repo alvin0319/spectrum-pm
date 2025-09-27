@@ -30,10 +30,14 @@ declare(strict_types=1);
 
 namespace cooldogedev\Spectrum\client\packet;
 
-use pocketmine\network\mcpe\protocol\serializer\PacketSerializer;
+use pmmp\encoding\ByteBufferReader;
+use pmmp\encoding\ByteBufferWriter;
+use pmmp\encoding\LE;
+use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use function json_decode;
 use function json_encode;
 use const JSON_INVALID_UTF8_IGNORE;
+use const JSON_THROW_ON_ERROR;
 
 final class ConnectionRequestPacket extends ProxyPacket
 {
@@ -59,21 +63,21 @@ final class ConnectionRequestPacket extends ProxyPacket
         return $packet;
     }
 
-    public function decodePayload(PacketSerializer $in): void
+    public function decodePayload(ByteBufferReader $in): void
     {
-        $this->address = $in->getString();
-        $this->clientData = json_decode($in->getString(), true, JSON_INVALID_UTF8_IGNORE);
-        $this->identityData = json_decode($in->getString(), true, JSON_INVALID_UTF8_IGNORE);
-        $this->protocolID = $in->getLInt();
-        $this->cache = $in->getString();
+        $this->address = CommonTypes::getString($in);
+        $this->clientData = json_decode(CommonTypes::getString($in), true, JSON_INVALID_UTF8_IGNORE);
+        $this->identityData = json_decode(CommonTypes::getString($in), true, JSON_INVALID_UTF8_IGNORE);
+        $this->protocolID = LE::readSignedInt($in);
+        $this->cache = CommonTypes::getString($in);
     }
 
-    public function encodePayload(PacketSerializer $out): void
+    public function encodePayload(ByteBufferWriter $out): void
     {
-        $out->putString($this->address);
-        $out->putString(json_encode($this->clientData, JSON_INVALID_UTF8_IGNORE));
-        $out->putString(json_encode($this->identityData, JSON_INVALID_UTF8_IGNORE));
-        $out->putLInt($this->protocolID);
-        $out->putString($this->cache);
+		CommonTypes::putString($out, $this->address);
+		CommonTypes::putString($out, json_encode($this->clientData));
+		CommonTypes::putString($out, json_encode($this->identityData));
+		LE::writeSignedInt($out, $this->protocolID);
+		CommonTypes::putString($out, $this->cache);
     }
 }

@@ -30,7 +30,8 @@ declare(strict_types=1);
 
 namespace cooldogedev\Spectrum\client\packet;
 
-use pocketmine\network\mcpe\protocol\serializer\PacketSerializer;
+use pmmp\encoding\ByteBufferReader;
+use pmmp\encoding\ByteBufferWriter;
 
 final class FlushPacket extends ProxyPacket
 {
@@ -41,7 +42,7 @@ final class FlushPacket extends ProxyPacket
         return new FlushPacket();
     }
 
-    protected function decodePayload(PacketSerializer $in): void {}
+    protected function decodePayload(ByteBufferReader $in): void {}
 
-    protected function encodePayload(PacketSerializer $out): void {}
+    protected function encodePayload(ByteBufferWriter $out): void {}
 }
