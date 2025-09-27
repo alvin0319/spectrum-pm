@@ -31,9 +31,9 @@ declare(strict_types=1);
 namespace cooldogedev\Spectrum\network;
 
 use cooldogedev\Spectrum\client\packet\FlushPacket;
+use pmmp\encoding\ByteBufferReader;
 use pocketmine\network\mcpe\PacketSender;
 use pocketmine\network\mcpe\protocol\serializer\PacketBatch;
-use pocketmine\utils\BinaryStream;
 use function substr;
 
 final class ProxySender implements PacketSender
@@ -48,7 +48,7 @@ final class ProxySender implements PacketSender
             return;
         }
 
-        $stream = new BinaryStream(substr($payload, 1));
+        $stream = new ByteBufferReader(substr($payload, 1));
         foreach (PacketBatch::decodeRaw($stream) as $packet) {
             $this->interface->sendOutgoingRaw($this->identifier, $packet, null);
         }

@@ -43,6 +43,8 @@ use cooldogedev\Spectrum\client\packet\ProxySerializer;
 use cooldogedev\Spectrum\Spectrum;
 use cooldogedev\Spectrum\util\JsonUtils;
 use Exception;
+use pmmp\encoding\ByteBufferReader;
+use pmmp\encoding\ByteBufferWriter;
 use pmmp\thread\ThreadSafeArray;
 use pocketmine\event\player\PlayerPreLoginEvent;
 use pocketmine\lang\KnownTranslationFactory;
@@ -51,10 +53,9 @@ use pocketmine\network\mcpe\NetworkSession;
 use pocketmine\network\mcpe\PacketBroadcaster;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\Packet;
-use pocketmine\network\mcpe\protocol\serializer\PacketSerializer;
-use pocketmine\network\mcpe\protocol\types\login\AuthenticationData;
-use pocketmine\network\mcpe\protocol\types\login\ClientData;
-use pocketmine\network\mcpe\protocol\types\login\ClientDataToSkinDataHelper;
+use pocketmine\network\mcpe\protocol\types\login\clientdata\ClientData;
+use pocketmine\network\mcpe\protocol\types\login\clientdata\ClientDataToSkinDataHelper;
+use pocketmine\network\mcpe\protocol\types\login\legacy\LegacyAuthIdentityData;
 use pocketmine\network\mcpe\raklib\PthreadsChannelReader;
 use pocketmine\network\mcpe\raklib\PthreadsChannelWriter;
 use pocketmine\network\mcpe\StandardEntityEventBroadcaster;
@@ -156,7 +157,7 @@ final class ProxyInterface implements NetworkInterface
         $session = $this->sessions[$identifier] ?? null;
         try {
             if ($packet instanceof ProxyPacket) {
-                $packet->decode(PacketSerializer::decoder($buffer, 0));
+                $packet->decode(new ByteBufferReader($buffer));
                 match (true) {
                     $packet instanceof LoginPacket => $this->login($identifier, $packet->address, $packet->port),
                     $packet instanceof ConnectionRequestPacket && $session !== null => $this->connect($session, $identifier, $packet->address, $packet->protocolID, $packet->clientData, $packet->identityData, $packet->cache),
@@ -201,9 +202,11 @@ final class ProxyInterface implements NetworkInterface
     {
         [$ip, $port] = explode(":", $address);
         $server = $this->plugin->getServer();
-        $clientData = JsonUtils::map($clientData, new ClientData());
-        $identityData = JsonUtils::map($identityData, new AuthenticationData());
-        if ($clientData === null || $identityData === null) {
+		$clientData = JsonUtils::map($clientData, new ClientData());
+		$identityData = JsonUtils::map($identityData, new LegacyAuthIdentityData());
+		/** @var ClientData $clientData */
+		/** @var LegacyAuthIdentityData $identityData */
+		if ($clientData === null || $identityData === null) {
             $session->disconnectWithError(KnownTranslationFactory::pocketmine_disconnect_error_authentication());
             return;
         }
@@ -315,9 +318,9 @@ final class ProxyInterface implements NetworkInterface
 
     public function sendOutgoing(int $identifier, Packet $packet, ?int $receiptId): void
     {
-        $encoder = PacketSerializer::encoder();
+        $encoder = new ByteBufferWriter();
         $packet->encode($encoder);
-        $this->sendOutgoingRaw($identifier, $encoder->getBuffer(), $receiptId);
+        $this->sendOutgoingRaw($identifier, $encoder->getData(), $receiptId);
     }
 
     public function sendOutgoingRaw(int $identifier, string $packet, ?int $receiptId): void
