@@ -150,7 +150,7 @@ final class ProxyInterface implements NetworkInterface
         $packet = ProxyPacketPool::getInstance()->getPacket($buffer);
         if ($packet === null) {
             $this->plugin->getLogger()->debug("Received unknown packet from client " . $identifier);
-            $this->disconnect($identifier, true);
+            $this->disconnect($identifier, true, "Unknown packet received");
             return;
         }
 
@@ -162,14 +162,14 @@ final class ProxyInterface implements NetworkInterface
                     $packet instanceof LoginPacket => $this->login($identifier, $packet->address, $packet->port),
                     $packet instanceof ConnectionRequestPacket && $session !== null => $this->connect($session, $identifier, $packet->address, $packet->protocolID, $packet->clientData, $packet->identityData, $packet->cache),
                     $packet instanceof LatencyPacket && $session !== null => $this->latency($session, $identifier, $packet->latency, $packet->timestamp),
-                    $packet instanceof DisconnectPacket => $this->disconnect($identifier, false),
+                    $packet instanceof DisconnectPacket => $this->disconnect($identifier, false, "Proxy caused disconnection"),
                     default => null,
                 };
             } else {
                 $session?->handleDataPacket($packet, $buffer);
             }
         } catch (Exception $exception) {
-            $this->disconnect($identifier, true);
+            $this->disconnect($identifier, true, "Error occured during packet process");
             $this->plugin->getLogger()->logException($exception);
         }
     }
